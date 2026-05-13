@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Agenda</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ee; --surface: #fffdf9; --border: #e0d8cc; --text: #2a2420; --muted: #9a8f84; --accent: #c9673a;
+    --cat-personal: #6b8f71; --cat-personal-light: #e8f0e9;
+    --cat-clases: #5b7fa6; --cat-clases-light: #e3ecf5;
+    --cat-oficina: #9b6b3a; --cat-oficina-light: #f5edde;
+    --slot-h: 56px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: var(--surface); border-bottom: 1.5px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--text); }
+  .brand span { font-size: 0.78rem; color: var(--muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .view-tabs { display: flex; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .view-tab { padding: 7px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: background .15s, color .15s; }
+  .view-tab.active { background: var(--accent); color: #fff; }
+  .view-tab:hover:not(.active) { background: var(--border); color: var(--text); }
+  .btn-icon { width: 34px; height: 34px; border: 1.5px solid var(--border); border-radius: 7px; background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--muted); transition: .15s; }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn-primary:hover { opacity: .88; }
+  .nav-cluster { display: flex; align-items: center; gap: 6px; }
+  .nav-label { font-family: 'DM Serif Display', serif; font-size: 1.05rem; min-width: 160px; text-align: center; }
+  main { flex: 1; padding: 20px 24px; }
+  .list-view { display: none; } .list-view.active { display: block; }
+  .list-day { margin-bottom: 20px; }
+  .list-day-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .list-day-name { font-family: 'DM Serif Display', serif; font-size: 1rem; }
+  .list-day-date { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .list-day-line { flex: 1; height: 1px; background: var(--border); }
+  .list-event { display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 6px; cursor: pointer; transition: box-shadow .15s, transform .1s; position: relative; overflow: hidden; }
+  .list-event::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .list-event:hover { box-shadow: 0 3px 12px rgba(0,0,0,.08); transform: translateX(2px); }
+  .list-event-time { font-size: 0.75rem; font-weight: 600; color: var(--muted); white-space: nowrap; padding-top: 2px; min-width: 72px; }
+  .list-event-body { flex: 1; }
+  .list-event-title { font-weight: 600; font-size: 0.88rem; margin-bottom: 2px; }
+  .list-event-note { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+  .list-event-cat { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; padding: 2px 7px; border-radius: 20px; white-space: nowrap; margin-left: auto; align-self: flex-start; }
+  .list-empty { padding: 14px; color: var(--muted); font-size: 0.82rem; font-style: italic; }
+  .week-view { display: none; } .week-view.active { display: flex; flex-direction: column; height: calc(100vh - 130px); }
+  .week-header-row { display: grid; grid-template-columns: 52px repeat(7, 1fr); border-bottom: 1.5px solid var(--border); background: var(--surface); border-radius: 10px 10px 0 0; overflow: hidden; }
+  .week-header-cell { padding: 10px 4px; text-align: center; border-right: 1px solid var(--border); font-size: 0.75rem; }
+  .week-header-cell:last-child { border-right: none; }
+  .week-col-day-name { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: block; margin-bottom: 3px; font-size: 0.68rem; }
+  .week-col-day-num { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--text); display: block; }
+  .week-header-cell.is-today .week-col-day-num { color: var(--accent); }
+  .week-header-cell.is-today { background: #fef3ee; }
+  .week-corner { border-right: 1px solid var(--border); }
+  .week-scroll { flex: 1; overflow-y: auto; border: 1.5px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; background: var(--surface); }
+  .week-scroll::-webkit-scrollbar { width: 6px; } .week-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .week-grid { display: grid; grid-template-columns: 52px repeat(7, 1fr); position: relative; }
+  .week-time-col { display: flex; flex-direction: column; }
+  .week-time-slot { height: var(--slot-h); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 6px 0 0; font-size: 0.66rem; font-weight: 600; color: var(--muted); border-right: 1px solid var(--border); }
+  .week-day-col { position: relative; border-right: 1px solid var(--border); }
+  .week-day-col:last-child { border-right: none; }
+  .week-day-col.is-today { background: #fef8f5; }
+  .week-hour-line { position: absolute; left: 0; right: 0; height: 1px; background: var(--border); pointer-events: none; }
+  .week-half-line { position: absolute; left: 0; right: 0; height: 1px; border-top: 1px dashed #ece8e2; pointer-events: none; }
+  .week-event { position: absolute; left: 2px; right: 2px; border-radius: 6px; padding: 4px 6px; font-size: 0.72rem; font-weight: 600; cursor: pointer; overflow: hidden; transition: box-shadow .15s, filter .15s; line-height: 1.3; z-index: 2; }
+  .week-event:hover { box-shadow: 0 4px 14px rgba(0,0,0,.15); filter: brightness(.95); z-index: 10; }
+  .week-event-note { font-weight: 400; opacity: .8; margin-top: 2px; font-size: 0.68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .month-view { display: none; } .month-view.active { display: block; }
+  .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+  .month-dow { padding: 10px 8px; text-align: center; font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; border-right: 1px solid var(--border); border-bottom: 1.5px solid var(--border); background: var(--bg); }
+  .month-dow:last-child { border-right: none; }
+  .month-cell { min-height: 100px; padding: 6px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; position: relative; }
+  .month-cell:hover { background: #f5f0ea; }
+  .month-cell:nth-child(7n) { border-right: none; }
+  .month-cell.other-month .month-day-num { color: #c8bfb5; }
+  .month-cell.is-today { background: #fef3ee; }
+  .month-day-num { font-family: 'DM Serif Display', serif; font-size: 0.9rem; margin-bottom: 4px; }
+  .month-dot-row { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+  .month-event-pill { font-size: 0.67rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .month-more { font-size: 0.67rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+  [data-cat="personal"] .list-event-cat { background: var(--cat-personal-light); color: var(--cat-personal); }
+  [data-cat="personal"]::before { background: var(--cat-personal); }
+  [data-cat="clases"] .list-event-cat { background: var(--cat-clases-light); color: var(--cat-clases); }
+  [data-cat="clases"]::before { background: var(--cat-clases); }
+  [data-cat="oficina"] .list-event-cat { background: var(--cat-oficina-light); color: var(--cat-oficina); }
+  [data-cat="oficina"]::before { background: var(--cat-oficina); }
+  .week-event[data-cat="personal"] { background: var(--cat-personal-light); color: var(--cat-personal); border-left: 3px solid var(--cat-personal); }
+  .week-event[data-cat="clases"] { background: var(--cat-clases-light); color: var(--cat-clases); border-left: 3px solid var(--cat-clases); }
+  .week-event[data-cat="oficina"] { background: var(--cat-oficina-light); color: var(--cat-oficina); border-left: 3px solid var(--cat-oficina); }
+  .month-event-pill[data-cat="personal"] { background: var(--cat-personal-light); color: var(--cat-personal); }
+  .month-event-pill[data-cat="clases"] { background: var(--cat-clases-light); color: var(--cat-clases); }
+  .month-event-pill[data-cat="oficina"] { background: var(--cat-oficina-light); color: var(--cat-oficina); }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(42,36,32,.45); backdrop-filter: blur(3px); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 14px; padding: 28px; width: 100%; max-width: 430px; box-shadow: 0 20px 50px rgba(0,0,0,.18); animation: slideUp .22s ease; }
+  @keyframes slideUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+  .modal h2 { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin-bottom: 20px; }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+  .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; background: var(--bg); color: var(--text); outline: none; transition: border-color .15s; }
+  .form-row input:focus, .form-row textarea:focus { border-color: var(--accent); }
+  .form-row textarea { resize: vertical; min-height: 70px; }
+  .form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cat-picker { display: flex; gap: 8px; }
+  .cat-btn { flex: 1; padding: 8px 6px; border-radius: 8px; border: 2px solid transparent; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-align: center; transition: .15s; }
+  .cat-btn[data-cat="personal"] { background: var(--cat-personal-light); color: var(--cat-personal); }
+  .cat-btn[data-cat="clases"] { background: var(--cat-clases-light); color: var(--cat-clases); }
+  .cat-btn[data-cat="oficina"] { background: var(--cat-oficina-light); color: var(--cat-oficina); }
+  .cat-btn[data-cat="personal"].selected { border-color: var(--cat-personal); }
+  .cat-btn[data-cat="clases"].selected { border-color: var(--cat-clases); }
+  .cat-btn[data-cat="oficina"].selected { border-color: var(--cat-oficina); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .btn-ghost { padding: 8px 18px; border: 1.5px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted); font-size: 0.82rem; cursor: pointer; font-weight: 600; }
+  .btn-ghost:hover { background: var(--border); }
+  .btn-danger { padding: 8px 14px; border: none; border-radius: 8px; background: #fdecea; color: #c0392b; font-size: 0.82rem; cursor: pointer; font-weight: 600; margin-right: auto; }
+  .filter-bar { display: flex; align-items: center; gap: 6px; padding: 0 0 14px; flex-wrap: wrap; }
+  .filter-pill { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: .15s; opacity: .55; }
+  .filter-pill.on { opacity: 1; border-color: currentColor; }
+  .filter-pill[data-cat="personal"] { background: var(--cat-personal-light); color: var(--cat-personal); }
+  .filter-pill[data-cat="clases"] { background: var(--cat-clases-light); color: var(--cat-clases); }
+  .filter-pill[data-cat="oficina"] { background: var(--cat-oficina-light); color: var(--cat-oficina); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1>Mi Agenda</h1><span id="todayBadge"></span></div>
+  <div class="header-controls">
+    <div class="nav-cluster">
+      <button class="btn-icon" id="prevBtn">‹</button>
+      <span class="nav-label" id="navLabel"></span>
+      <button class="btn-icon" id="nextBtn">›</button>
+      <button class="btn-icon" id="todayBtn">◉</button>
+    </div>
+    <div class="view-tabs">
+      <button class="view-tab" data-view="list">Lista</button>
+      <button class="view-tab active" data-view="week">Semana</button>
+      <button class="view-tab" data-view="month">Mes</button>
+    </div>
+    <button class="btn-primary" id="addBtn">+ Agregar</button>
+  </div>
+</header>
+<main>
+  <div class="filter-bar">
+    <span style="font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase">Filtrar:</span>
+    <div class="filter-pill on" data-cat="personal">Personal</div>
+    <div class="filter-pill on" data-cat="clases">Clases</div>
+    <div class="filter-pill on" data-cat="oficina">Oficina</div>
+  </div>
+  <div class="list-view" id="listView"></div>
+  <div class="week-view active" id="weekView">
+    <div class="week-header-row" id="weekHeaderRow"></div>
+    <div class="week-scroll" id="weekScroll"><div class="week-grid" id="weekGrid"></div></div>
+  </div>
+  <div class="month-view" id="monthView"></div>
+</main>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Nueva Actividad</h2>
+    <div class="form-row"><label>Título</label><input type="text" id="fTitle" placeholder="Nombre de la actividad"></div>
+    <div class="form-row"><label>Categoría</label>
+      <div class="cat-picker">
+        <div class="cat-btn selected" data-cat="personal">🌿 Personal</div>
+        <div class="cat-btn" data-cat="clases">📚 Clases</div>
+        <div class="cat-btn" data-cat="oficina">💼 Oficina</div>
+      </div>
+    </div>
+    <div class="form-row"><label>Fecha</label><input type="date" id="fDate"></div>
+    <div class="form-row form-row-2col">
+      <div><label>Inicio</label><input type="time" id="fStart" value="09:00"></div>
+      <div><label>Fin</label><input type="time" id="fEnd" value="10:00"></div>
+    </div>
+    <div class="form-row"><label>Nota</label><textarea id="fNote" placeholder="Descripción, materiales, recordatorios…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="deleteBtn" style="display:none">Eliminar</button>
+      <button class="btn-ghost" id="cancelBtn">Cancelar</button>
+      <button class="btn-primary" id="saveBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+<script>
+const HOUR_START=7,HOUR_END=22,SLOT_H=56;
+const HOURS=Array.from({length:HOUR_END-HOUR_START},(_,i)=>i+HOUR_START);
+const DAYS_ES=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MONTHS_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let currentView='week',currentDate=new Date(),editingId=null,selectedCat='personal';
+let activeFilters=new Set(['personal','clases','oficina']);
+function uid(){return Math.random().toString(36).slice(2,10)}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function pad(n){return String(n).padStart(2,'0')}
+function dateStr(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function parseTime(t){const[h,m]=t.split(':').map(Number);return h+m/60}
+function fmtTime(t){let[h,m]=t.split(':').map(Number);const p=h>=12?'pm':'am';h=h%12||12;return`${h}:${pad(m)} ${p}`}
+function getWeekStart(d){const r=new Date(d);r.setDate(r.getDate()-((r.getDay()+6)%7));r.setHours(0,0,0,0);return r}
+function save(){localStorage.setItem('agendaEvents',JSON.stringify(events))}
+function catLabel(c){return{personal:'Personal',clases:'Clases',oficina:'Oficina'}[c]||c}
+function visibleEvents(){return events.filter(e=>activeFilters.has(e.cat))}
+
+let events=JSON.parse(localStorage.getItem('agendaEvents')||'null');
+if(!events){
+  const t=new Date(),mon=getWeekStart(t);
+  events=[
+    {id:uid(),title:'Revisar QA Report',cat:'oficina',date:dateStr(mon),start:'09:00',end:'10:00',note:'Datos semanales, validar VLOOKUP masterfile'},
+    {id:uid(),title:'Clase A2 – Vocabulario Familia',cat:'clases',date:dateStr(addDays(mon,1)),start:'11:00',end:'13:00',note:'Tarjetas de rol, formulario CERFA'},
+    {id:uid(),title:'Pilates',cat:'personal',date:dateStr(addDays(mon,1)),start:'07:30',end:'08:30',note:'Rutina principiante + isométricos'},
+    {id:uid(),title:'Preparar materiales A2',cat:'clases',date:dateStr(addDays(mon,2)),start:'14:00',end:'16:00',note:'Futur simple – 4 competencias CEFR'},
+    {id:uid(),title:'Reunión equipo',cat:'oficina',date:dateStr(addDays(mon,3)),start:'10:00',end:'11:00',note:'Revisión KPIs semana'},
+    {id:uid(),title:'Lectura personal',cat:'personal',date:dateStr(addDays(mon,4)),start:'20:00',end:'21:00',note:'Novela – mínimo 30 páginas'},
+  ];save();
+}
+
+function navigate(dir){
+  if(currentView==='week'||currentView==='list')currentDate=addDays(currentDate,dir*7);
+  else currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()+dir,1);
+  render();
+}
+function goToday(){currentDate=new Date();render()}
+function updateNavLabel(){
+  const el=document.getElementById('navLabel');
+  if(currentView==='month'){el.textContent=`${MONTHS_ES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;return}
+  const ws=getWeekStart(currentDate),we=addDays(ws,6);
+  if(ws.getMonth()===we.getMonth())el.textContent=`${ws.getDate()}–${we.getDate()} ${MONTHS_ES[ws.getMonth()]} ${ws.getFullYear()}`;
+  else el.textContent=`${ws.getDate()} ${MONTHS_ES[ws.getMonth()].slice(0,3)} – ${we.getDate()} ${MONTHS_ES[we.getMonth()].slice(0,3)}`;
+}
+function render(){updateNavLabel();if(currentView==='list')renderList();else if(currentView==='week')renderWeek();else renderMonth()}
+
+function renderList(){
+  const ws=getWeekStart(currentDate),container=document.getElementById('listView'),today=dateStr(new Date());
+  container.innerHTML='';
+  for(let i=0;i<7;i++){
+    const day=addDays(ws,i),ds=dateStr(day),isToday=ds===today;
+    const dayEvs=visibleEvents().filter(e=>e.date===ds).sort((a,b)=>a.start.localeCompare(b.start));
+    const sec=document.createElement('div');sec.className='list-day'+(isToday?' list-day-today':'');
+    const hdr=document.createElement('div');hdr.className='list-day-header';
+    hdr.innerHTML=`<span class="list-day-name" style="${isToday?'color:var(--accent)':''}">${DAYS_ES[day.getDay()]}</span><span class="list-day-date">${day.getDate()} ${MONTHS_ES[day.getMonth()].slice(0,3)}</span><div class="list-day-line"></div>${isToday?'<span style="font-size:.7rem;font-weight:700;color:var(--accent)">HOY</span>':''}`;
+    sec.appendChild(hdr);
+    if(!dayEvs.length){const e=document.createElement('div');e.className='list-empty';e.textContent='Sin actividades';sec.appendChild(e);}
+    else dayEvs.forEach(ev=>{
+      const el=document.createElement('div');el.className='list-event';el.dataset.cat=ev.cat;
+      el.innerHTML=`<span class="list-event-time">${fmtTime(ev.start)}<br><span style="color:#ccc;font-size:.7rem">→ ${fmtTime(ev.end)}</span></span><div class="list-event-body"><div class="list-event-title">${ev.title}</div>${ev.note?`<div class="list-event-note">${ev.note}</div>`:''}</div><span class="list-event-cat">${catLabel(ev.cat)}</span>`;
+      el.addEventListener('click',()=>openEdit(ev.id));sec.appendChild(el);
+    });
+    container.appendChild(sec);
+  }
+}
+
+function renderWeek(){
+  const ws=getWeekStart(currentDate),today=dateStr(new Date());
+  const hdr=document.getElementById('weekHeaderRow');hdr.innerHTML='<div class="week-corner"></div>';
+  for(let i=0;i<7;i++){const d=addDays(ws,i),ds=dateStr(d),c=document.createElement('div');c.className='week-header-cell'+(ds===today?' is-today':'');c.innerHTML=`<span class="week-col-day-name">${DAYS_ES[d.getDay()]}</span><span class="week-col-day-num">${d.getDate()}</span>`;hdr.appendChild(c)}
+  const grid=document.getElementById('weekGrid');grid.innerHTML='';
+  const totalH=(HOUR_END-HOUR_START)*SLOT_H;grid.style.minHeight=totalH+'px';
+  const tc=document.createElement('div');tc.className='week-time-col';
+  HOURS.forEach(h=>{const s=document.createElement('div');s.className='week-time-slot';s.textContent=h+':00';tc.appendChild(s)});
+  grid.appendChild(tc);
+  for(let i=0;i<7;i++){
+    const d=addDays(ws,i),ds=dateStr(d),col=document.createElement('div');
+    col.className='week-day-col'+(ds===today?' is-today':'');col.style.minHeight=totalH+'px';
+    HOURS.forEach((_,idx)=>{
+      const l=document.createElement('div');l.className='week-hour-line';l.style.top=(idx*SLOT_H)+'px';col.appendChild(l);
+      if(idx<HOURS.length-1){const hl=document.createElement('div');hl.className='week-half-line';hl.style.top=(idx*SLOT_H+SLOT_H/2)+'px';col.appendChild(hl)}
+    });
+    col.addEventListener('click',e=>{
+      if(e.target!==col)return;
+      const rect=col.getBoundingClientRect(),relY=e.clientY-rect.top;
+      const h=Math.min(Math.floor(relY/SLOT_H)+HOUR_START,HOUR_END-1);
+      openAdd(ds,`${pad(h)}:00`,`${pad(Math.min(h+1,HOUR_END))}:00`);
+    });
+    visibleEvents().filter(e=>e.date===ds).forEach(ev=>{
+      const top=(parseTime(ev.start)-HOUR_START)*SLOT_H,height=Math.max((parseTime(ev.end)-parseTime(ev.start))*SLOT_H,22);
+      const el=document.createElement('div');el.className='week-event';el.dataset.cat=ev.cat;
+      el.style.top=top+'px';el.style.height=height+'px';
+      el.innerHTML=`<div>${ev.title}</div>${ev.note&&height>36?`<div class="week-event-note">${ev.note}</div>`:''}`;
+      el.addEventListener('click',e=>{e.stopPropagation();openEdit(ev.id)});col.appendChild(el);
+    });
+    grid.appendChild(col);
+  }
+  setTimeout(()=>{document.getElementById('weekScroll').scrollTop=0},50);
+}
+
+function renderMonth(){
+  const container=document.getElementById('monthView'),today=dateStr(new Date());container.innerHTML='';
+  const y=currentDate.getFullYear(),m=currentDate.getMonth();
+  const firstDay=new Date(y,m,1),startOffset=(firstDay.getDay()+6)%7;
+  const daysInMonth=new Date(y,m+1,0).getDate(),daysInPrev=new Date(y,m,0).getDate();
+  const grid=document.createElement('div');grid.className='month-grid';
+  ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].forEach(d=>{const h=document.createElement('div');h.className='month-dow';h.textContent=d;grid.appendChild(h)});
+  const total=Math.ceil((startOffset+daysInMonth)/7)*7;
+  for(let i=0;i<total;i++){
+    let cellDate,isOther=false;
+    if(i<startOffset){cellDate=new Date(y,m-1,daysInPrev-startOffset+i+1);isOther=true}
+    else if(i<startOffset+daysInMonth)cellDate=new Date(y,m,i-startOffset+1);
+    else{cellDate=new Date(y,m+1,i-startOffset-daysInMonth+1);isOther=true}
+    const ds=dateStr(cellDate),isToday=ds===today;
+    const cell=document.createElement('div');cell.className='month-cell'+(isOther?' other-month':'')+(isToday?' is-today':'');
+    const num=document.createElement('div');num.className='month-day-num';num.textContent=cellDate.getDate();
+    if(isToday)num.style.cssText='background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:.88rem';
+    cell.appendChild(num);
+    const dayEvs=visibleEvents().filter(e=>e.date===ds).sort((a,b)=>a.start.localeCompare(b.start));
+    const row=document.createElement('div');row.className='month-dot-row';
+    dayEvs.slice(0,3).forEach(ev=>{const p=document.createElement('div');p.className='month-event-pill';p.dataset.cat=ev.cat;p.textContent=ev.title;p.addEventListener('click',e=>{e.stopPropagation();openEdit(ev.id)});row.appendChild(p)});
+    if(dayEvs.length>3){const more=document.createElement('div');more.className='month-more';more.textContent=`+${dayEvs.length-3} más`;row.appendChild(more)}
+    cell.appendChild(row);cell.addEventListener('click',()=>openAdd(ds));grid.appendChild(cell);
+  }
+  container.appendChild(grid);
+}
+
+function openAdd(dateVal,start='09:00',end='10:00'){
+  editingId=null;document.getElementById('modalTitle').textContent='Nueva Actividad';
+  document.getElementById('fTitle').value='';document.getElementById('fDate').value=dateVal||dateStr(new Date());
+  document.getElementById('fStart').value=start;document.getElementById('fEnd').value=end;
+  document.getElementById('fNote').value='';document.getElementById('deleteBtn').style.display='none';
+  setCat('personal');document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fTitle').focus(),100);
+}
+function openEdit(id){
+  const ev=events.find(e=>e.id===id);if(!ev)return;editingId=id;
+  document.getElementById('modalTitle').textContent='Editar Actividad';
+  document.getElementById('fTitle').value=ev.title;document.getElementById('fDate').value=ev.date;
+  document.getElementById('fStart').value=ev.start;document.getElementById('fEnd').value=ev.end;
+  document.getElementById('fNote').value=ev.note||'';document.getElementById('deleteBtn').style.display='block';
+  setCat(ev.cat);document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
+function setCat(cat){selectedCat=cat;document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('selected',b.dataset.cat===cat))}
+document.querySelectorAll('.cat-btn').forEach(b=>b.addEventListener('click',()=>setCat(b.dataset.cat)));
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  const title=document.getElementById('fTitle').value.trim();if(!title){document.getElementById('fTitle').focus();return}
+  const ev={id:editingId||uid(),title,cat:selectedCat,date:document.getElementById('fDate').value,start:document.getElementById('fStart').value,end:document.getElementById('fEnd').value,note:document.getElementById('fNote').value.trim()};
+  if(editingId){const idx=events.findIndex(e=>e.id===editingId);events[idx]=ev}else events.push(ev);
+  save();closeModal();render();
+});
+document.getElementById('deleteBtn').addEventListener('click',()=>{if(!editingId)return;events=events.filter(e=>e.id!==editingId);save();closeModal();render()});
+document.getElementById('cancelBtn').addEventListener('click',closeModal);
+document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('modalOverlay'))closeModal()});
+document.querySelectorAll('.view-tab').forEach(tab=>tab.addEventListener('click',()=>{
+  currentView=tab.dataset.view;
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t===tab));
+  document.getElementById('listView').classList.toggle('active',currentView==='list');
+  document.getElementById('weekView').classList.toggle('active',currentView==='week');
+  document.getElementById('monthView').classList.toggle('active',currentView==='month');
+  render();
+}));
+document.getElementById('prevBtn').addEventListener('click',()=>navigate(-1));
+document.getElementById('nextBtn').addEventListener('click',()=>navigate(1));
+document.getElementById('todayBtn').addEventListener('click',goToday);
+document.getElementById('addBtn').addEventListener('click',()=>openAdd(dateStr(new Date())));
+document.querySelectorAll('.filter-pill').forEach(pill=>pill.addEventListener('click',()=>{
+  const cat=pill.dataset.cat;if(activeFilters.has(cat))activeFilters.delete(cat);else activeFilters.add(cat);
+  pill.classList.toggle('on',activeFilters.has(cat));render();
+}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+document.getElementById('todayBadge').textContent=`${DAYS_ES[new Date().getDay()]} ${new Date().getDate()} ${MONTHS_ES[new Date().getMonth()].slice(0,3)}`;
+render();
+</script>
+</body>
+</html>
